@@ -1,0 +1,364 @@
+#!/bin/bash
+
+version="1.0.0"
+
+help() {
+  echo "Usage:"
+	echo "$script [OPTIONS|FILE] [-- VIMOPTIONS]"
+	echo ""
+  echo "Options:"
+  echo "  -c, --columns <COLS>   The number of columns available"
+  echo "  -e, --embed            Generate output for embeding in another"
+	echo "                         application (i.e. ranger)"
+  echo "  -h, --help             Display this help message and exit"
+  echo "  -l, --lines <LINES>    The number of lines available"
+  echo "  -m, --max <MAX>        Cut input after MAX lines"
+  echo "  --no-bottom            Do not display the bar at the bottom"
+  echo "  --flat-bottom          Display only the status bar at the bottom,"
+	echo "                         but not the command space"
+  echo "  --no-top               Do not display the bar at the top"
+  echo "  --trunc                Truncate lines that exeed the file length"
+  echo "  -q, --quiet            Suppress messages"
+  echo "  -u, --vimrc <VIMRC>    Set a custom vimrc file. Default is ~/.vimrc. If option"
+  echo "                         used withot specifying VIMRC, ~/.vimcatrc is set."
+  echo "  -v, --version          Print version"
+	echo ""
+	echo "Vim options:"
+	echo "vimcat will pass the arguments after the -- directly to vim. Consider wrapping"
+	echo "these arguments in doublequotes."
+	echo ""
+	echo "Example:"
+	echo "$script foo.py -qelc 40 80 --vimrc --no-top --no-bottom -- \"-c'set wrap!'\""
+	echo "This will use a 40 by 80 area to display foo.py. vim will use ~/.vimcatrc as"
+	echo "vimrc, and will not wrap the lines. No bars will be shown. Messages are not"
+	echo "displayed. The output will be compatible with an embedding application."
+}
+
+put() {
+  if [[ -z "$quiet" ]]; then
+    echo "vimcat: $1" >&2
+  fi
+}
+
+compare_versions() {
+    local v1=(${1//./ })
+    local v2=(${2//./ })
+
+    # Check if the version strings contain only digits and dots
+    if ! [[ "$1" =~ ^[0-9.]+$ ]] || ! [[ "$2" =~ ^[0-9.]+$ ]]; then
+        return 3
+    fi
+
+    # Compare each component of the version strings
+    local i
+    for ((i=0; i<${#v1[@]}; i++)); do
+        if ((v1[i] > v2[i])); then
+            return 0
+        elif ((v1[i] < v2[i])); then
+            return 1
+        fi
+    done
+
+    # If all components are equal, check if one version has more components
+    if (( ${#v1[@]} < ${#v2[@]} )); then
+        return 1
+    elif (( ${#v1[@]} > ${#v2[@]} )); then
+        return 0
+    fi
+
+    # Both versions are equal
+    return 2
+}
+
+install() {
+  install_loc="/usr/bin/vimcat"
+  if [[ -e "$install_loc" ]]; then
+    if compare_versions "$version" "$(vimcat --version)"; then
+      if cp "$dir/vimcat" "$install_loc" 2> "/dev/null"; then
+        put "Successfully updated vimcat"
+        return
+      else
+        put "Must run as root"
+        exit 1
+      fi
+    else
+      put "Already up to date"
+    fi
+  else
+    if cp "$dir/vimcat" "$install_loc" 2> "/dev/null"; then
+      chmod +x "$install_loc"
+      put "Succsessfully installed vimcat"
+    else
+      put "Must run as root"
+      exit 1
+    fi
+  fi
+}
+
+script="$0"
+dir="$(dirname -- "$(readlink -f "$0")")"
+tmp_dir="$HOME/.local/state/vimcat/tmp"
+
+if [[ ! -d "$tmp_dir" ]]; then
+  if [[ -e "$tmp_dir" ]]; then
+    put "Cant locate tmp files"
+    exit 1
+  else
+    mkdir -p "$tmp_dir"
+  fi
+fi
+
+# Display bar on the top or on the bottom
+top=1
+bottom=2
+
+# Parse command line arguments
+while [[ $# -gt 0 ]]; do
+  case "$1" in
+    -c|--columns)
+      columns="$2"
+      shift 2
+      ;;
+    -e|--embed)
+      embed=true
+      trunc=
+      shift
+      ;;
+    -h|--help)
+      help
+      exit 1
+      ;;
+    --install)
+      install
+      exit
+      ;;
+    -l|--lines)
+      lines="$2"
+      trunc=
+      shift 2
+      ;;
+    -m|--max)
+      max="$2"
+      shift 2
+      ;;
+    --no-bottom)
+      bottom=0
+      shift
+      ;;
+    --flat-bottom)
+      bottom=1
+      shift
+      ;;
+    --no-top)
+      top=0
+      shift
+      ;;
+    --trunc)
+      trunc=true
+      shift
+      ;;
+    -q|--quiet)
+      quiet=true
+      shift
+      ;;
+    -u|--vimrc)
+      case "$2" in
+        -*|--*|"")
+          vimrc="$HOME/.vimcatrc"
+          shift
+          ;;
+        *)
+          vimrc="$2"
+          shift 2
+          ;;
+      esac
+      ;;
+    -v|--version)
+      echo "$version"
+      exit
+      ;;
+    --)
+      shift
+      break
+      ;;
+    -*)
+      arg="$1"
+      shift
+      length=${#arg}
+      for (( i = 1; i < length; i++ )); do
+        char="${arg:i:1}"
+        case "$char" in
+          c)
+            columns="$1"
+            shift
+            ;;
+          e)
+            embed=true
+            ;;
+          h)
+            help
+            exit 1
+            ;;
+          l)
+            lines="$1"
+            shift
+            ;;
+          m)
+            max="$1"
+            shift
+            ;;
+          q)
+            quiet=true
+            ;;
+          u)
+            case "$1" in
+              -*|--*|"")
+                vimrc="$HOME/.vimcatrc"
+                ;;
+              *)
+                vimrc="$1"
+                shift
+                ;;
+            esac
+            ;;
+          v)
+            echo "$version"
+            exit
+            ;;
+          -)
+            ;;
+          *)
+            put "Unknown option: ${char@Q}"
+            exit 1
+            ;;
+        esac
+      done
+      ;;
+    *)
+	    if [[ -n "$input" ]]; then
+        put "Input overrided: ${1@Q}"
+  	  fi
+      input="$1"
+      shift
+      ;;
+  esac
+done
+# Extra commands for vim
+extra_commands="${@:1}"
+
+if [[ -n "$input" ]]; then
+	if [[ ! -f "$input" ]]; then
+		put "Cannot open file for reading: ${input@Q}"
+    exit 1
+  fi
+  tmp_file="$tmp_dir/${input##*/}"
+else
+  if [[ -t 0 ]]; then
+    put "No input specified"
+    exit 1
+  fi
+  tmp_file="$tmp_dir/STDIN"
+fi
+typescript_file="$tmp_dir/typescript"
+
+# Calculate max and lines
+if [[ -n "$lines" ]]; then
+  lines=$(( lines + 3 - top - bottom ))
+  new_max=$(( lines - top - bottom ))
+  if [[ -n "$max" ]]; then
+    if [[ "$new_max" -lt "$max" ]]; then
+      put "Lines overrides max"
+      max="$new_max"
+    fi
+  else
+    max=$(( lines - top - bottom ))
+  fi
+else
+  if [[ -n "$max" ]]; then
+    lines=$(( max + 3 ))
+  fi
+fi
+
+# Construct command to create tmp_file
+if [[ -n "$max" ]]; then
+  command="head -n $max"
+else
+  command="cat"
+fi
+
+if [[ -n "$input" ]]; then
+  command+=" $input"
+fi
+
+# Replace empty lines with an empty braille symbol if embed is set
+if [[ -n "$embed" ]]; then
+  command+=" | sed -E \"s/^\\s*$/\xE2\xA0\x80/\""
+fi
+
+eval "$command" > "$tmp_file"
+
+# Get max and lines if not set
+if [[ -z "$max" ]]; then
+  max=$(wc -l < "$tmp_file")
+  lines=$(( max + 3 ))
+fi
+
+if [[ -z "$columns" ]]; then
+  columns=$(tput cols)
+else
+  if [[ "$columns" -lt 12 ]]; then
+    columns=12
+  fi
+fi
+
+# Set vimrc
+if [[ -n "$vimrc" ]]; then
+  if [[ ! -f "$vimrc" ]]; then
+    put "Vimrc not found: ${vimrc@Q}"
+    exit 1
+  fi
+  vimrc="-u ${vimrc@Q}"
+fi
+
+# Run Vim with specified configuration and commands, capturing typescript
+vim_command="vim $vimrc -R -c'set lines=$lines columns=$columns' $extra_commands +redraw +q ${tmp_file@Q}"
+result=$(script -o 1000000 -qc "$vim_command" "$typescript_file")
+
+# Construct sed command to pipe through
+e=$(echo -en "\e")
+command="sed"
+
+command+=" -e '1s/.*${e}\\[$(( 2 - top ));1H//'"
+
+if [[ -n "$trunc" ]]; then
+  command+=" -e 's/^${e}\\[[[:digit:]]*m~[${e}[:digit:] \\[;H~]*m${e}\\[[[:digit:]]*;1H//'"
+fi
+
+if [[ -n "$embed" ]]; then
+  line_number_color=$(echo "$result" | grep -Eoh "${e}\\[[[:digit:]]*m~")
+  if [[ -n "$line_number_color" ]]; then
+    line_number_color=${line_number_color::-1}
+  fi
+  command+=" -e 's/${e}\\[[[:digit:]]*;1H/\n${line_number_color}/g'"
+fi
+
+command+=" -e 's/${e}\\[[[:digit:]]*;[[:digit:]]*H//g' -e '1s/${e}\\[\\?1049h//' -e '$ s/.\\[\\?1049l.*//'"
+
+if [[ "$bottom" -ne 2 ]]; then
+  command+=" | head -n -$(( 2 - bottom ))"
+fi
+
+if [[ -n "embed" ]]; then
+  command+=" | python -c $'import re, sys\ndef spaces(match):\n  return \" \" * int(match[1])\nfor line in sys.stdin:\n  sys.stdout.write(re.sub(\"\\033\\\\[(\\\\d+)C\", spaces, line))'"
+fi
+
+echo "$result" | eval "$command"
+
+# Restore cursor visibility
+echo -en "\e[?25h"
+
+# Clean up temporary files
+rm -f "$typescript_file" "$tmp_file"
+
+# Exit successfully
+exit 0
