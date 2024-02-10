@@ -4,34 +4,34 @@ version="1.0.0"
 
 help() {
   echo "Usage:"
-	echo "$script [OPTIONS|FILE] [-- VIMOPTIONS]"
-	echo ""
+  echo "$script [OPTIONS|FILE] [-- VIMOPTIONS]"
+  echo ""
   echo "Options:"
   echo "  -c, --columns <COLS>   The number of columns available"
   echo "  -e, --embed            Generate output for embeding in another"
-	echo "                         application (i.e. ranger)"
+  echo "                         application (i.e. ranger)"
   echo "  -h, --help             Display this help message and exit"
   echo "  -l, --lines <LINES>    The number of lines available"
   echo "  -m, --max <MAX>        Cut input after MAX lines"
   echo "  --no-bottom            Do not display the bar at the bottom"
   echo "  --flat-bottom          Display only the status bar at the bottom,"
-	echo "                         but not the command space"
+  echo "                         but not the command space"
   echo "  --no-top               Do not display the bar at the top"
   echo "  --trunc                Truncate lines that exeed the file length"
   echo "  -q, --quiet            Suppress messages"
   echo "  -u, --vimrc <VIMRC>    Set a custom vimrc file. Default is ~/.vimrc. If option"
   echo "                         used withot specifying VIMRC, ~/.vimcatrc is set."
   echo "  -v, --version          Print version"
-	echo ""
-	echo "Vim options:"
-	echo "vimcat will pass the arguments after the -- directly to vim. Consider wrapping"
-	echo "these arguments in doublequotes."
-	echo ""
-	echo "Example:"
-	echo "$script foo.py -qelc 40 80 --vimrc --no-top --no-bottom -- \"-c'set wrap!'\""
-	echo "This will use a 40 by 80 area to display foo.py. vim will use ~/.vimcatrc as"
-	echo "vimrc, and will not wrap the lines. No bars will be shown. Messages are not"
-	echo "displayed. The output will be compatible with an embedding application."
+  echo ""
+  echo "Vim options:"
+  echo "vimcat will pass the arguments after the -- directly to vim. Consider wrapping"
+  echo "these arguments in doublequotes."
+  echo ""
+  echo "Example:"
+  echo "$script foo.py -qelc 40 80 --vimrc --no-top --no-bottom -- \"-c'set wrap!'\""
+  echo "This will use a 40 by 80 area to display foo.py. vim will use ~/.vimcatrc as"
+  echo "vimrc, and will not wrap the lines. No bars will be shown. Messages are not"
+  echo "displayed. The output will be compatible with an embedding application."
 }
 
 put() {
@@ -235,9 +235,9 @@ while [[ $# -gt 0 ]]; do
       done
       ;;
     *)
-	    if [[ -n "$input" ]]; then
+      if [[ -n "$input" ]]; then
         put "Input overrided: ${1@Q}"
-  	  fi
+      fi
       input="$1"
       shift
       ;;
@@ -247,8 +247,8 @@ done
 extra_commands="${@:1}"
 
 if [[ -n "$input" ]]; then
-	if [[ ! -f "$input" ]]; then
-		put "Cannot open file for reading: ${input@Q}"
+  if [[ ! -f "$input" ]]; then
+    put "Cannot open file for reading: ${input@Q}"
     exit 1
   fi
   tmp_file="$tmp_dir/${input##*/}"
