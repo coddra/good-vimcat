@@ -1,20 +1,25 @@
 # Finally a Good VimCat!
 
 This `vimcat`
+
 - is fast
 - generates output that can be embedded
 - has a userfriendly interface
 - has many options
 - does not clear the screen
 
-Install the script by running
+### Install the script by running
+
 ```bash
 sudo ./vimcat --install
 ```
 
-**Use it in your [`ranger`](https://github.com/ranger/ranger) config!**
+### Use it in your [`ranger`](https://github.com/ranger/ranger) config!
 
-`scope.sh`:
+![Embedding in ranger](screenshots/tmux_split_window_ranger_embed.png "Embedding in ranger")
+
+In `scope.sh`:
+
 ```bash
 # ranger provides these as arguments
 FILE_PATH="$1"
